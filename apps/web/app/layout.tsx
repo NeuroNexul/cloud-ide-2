@@ -4,6 +4,7 @@ import { JetBrains_Mono, Barlow } from "next/font/google";
 import "./globals.css";
 import { cn } from "@repo/ui/lib/utils";
 import { SettingsProvider } from "~/context/settings";
+import { SocketProvider } from "~/context/socket";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -38,20 +39,22 @@ export default function RootLayout({
 }>) {
   return (
     <html lang="en">
-      <SettingsProvider>
-        <body
-          className={cn(
-            geistSans.variable,
-            geistMono.variable,
-            barlow.variable,
-            jetbrains_mono.variable,
-            "antialiased",
-            "dark"
-          )}
-        >
-          {children}
-        </body>
-      </SettingsProvider>
+      <SocketProvider>
+        <SettingsProvider>
+          <body
+            className={cn(
+              geistSans.variable,
+              geistMono.variable,
+              barlow.variable,
+              jetbrains_mono.variable,
+              "antialiased",
+              "dark"
+            )}
+          >
+            {children}
+          </body>
+        </SettingsProvider>
+      </SocketProvider>
     </html>
   );
 }

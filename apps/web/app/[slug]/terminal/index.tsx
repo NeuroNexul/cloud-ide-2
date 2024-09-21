@@ -4,41 +4,14 @@ import React, { useEffect, useRef } from "react";
 import { Terminal as Term } from "@xterm/xterm";
 import { FitAddon } from "@xterm/addon-fit";
 import "@xterm/xterm/css/xterm.css";
+import { useSocket } from "~/context/socket";
 
-type Props = object;
+type Props = {};
 
 export default function Terminal({}: Props) {
+  const socket = useSocket();
   const TElement = useRef<HTMLDivElement>(null);
   const XTerm = useRef<Term>();
-
-  function handleCommand(input: string) {
-    if (!XTerm.current) return;
-
-    if (input === "") {
-      XTerm.current.writeln("");
-      XTerm.current.write("\x1B[1;32muser@User\x1B[0m:\x1B[1;34m/cloud-ide\x1B[0m$ ");
-      return;
-    }
-
-    const args = input.split(" ");
-    const command = args[0];
-    const params = args.slice(1).join(" ");
-    switch (command) {
-      case "echo":
-        XTerm.current.writeln("");
-        XTerm.current.writeln(params);
-        XTerm.current.write("\x1B[1;32muser@User\x1B[0m:\x1B[1;34m/cloud-ide\x1B[0m$ ");
-        break;
-      case "cat":
-        // Implement 'cat' command logic here
-        break;
-      default:
-        XTerm.current.writeln("");
-        XTerm.current.writeln("");
-        XTerm.current.writeln(`Command not found: ${command}`);
-        XTerm.current.write("\x1B[1;32muser@User\x1B[0m:\x1B[1;34m/cloud-ide\x1B[0m$ ");
-    }
-  }
 
   useEffect(() => {
     if (XTerm.current) {
@@ -79,48 +52,48 @@ export default function Terminal({}: Props) {
       const fitAddon = new FitAddon();
       XTerm.current.loadAddon(fitAddon);
       fitAddon.fit();
+      socket.emit("terminal:resize", JSON.stringify(fitAddon.proposeDimensions())); // Initial resize
 
       XTerm.current.open(TElement.current);
-      XTerm.current.write("\x1B[1;32muser@User\x1B[0m:\x1B[1;34m/cloud-ide\x1B[0m$ ");
 
-      // XTerm.current.onData((data) => {
-      //   XTerm.current?.write(data);
-      // });
-
-      let command = "";
-      XTerm.current.onData((e) => {
+      XTerm.current.onKey(async (e) => {
         if (!XTerm.current) return;
 
-        if (e === "\r") {
-          // Enter key
-          handleCommand(command.trim());
-          command = ""; // Reset command buffer
-        } else if (e === "\x7F") {
-          // Backspace key
-          if (command.length > 0) {
-            XTerm.current.write("\b \b"); // Move cursor back, erase character, move cursor back again
-            command = command.slice(0, -1); // Remove last character from command buffer
-          }
-        } else if (e === "\x0C") {
-          // Ctrl+L
-          XTerm.current.clear();
-        } else {
-          XTerm.current.write(e); // Echo the typed character
-          command += e; // Add typed character to command buffer
-        }
+        await fetch("http://localhost:5001/terminal", {
+          method: "POST",
+          headers: {
+            "Content-Type": "application/json",
+          },
+          body: JSON.stringify({ data: e.key }),
+        });
       });
 
       const resizeObserver = new ResizeObserver(() => {
         fitAddon.fit();
+        socket.emit("terminal:resize", JSON.stringify(fitAddon.proposeDimensions()));
       });
       resizeObserver.observe(TElement.current);
 
       return () => {
         resizeObserver.disconnect();
         XTerm.current?.dispose();
+        XTerm.current = undefined;
       };
     }
   }, [TElement, XTerm]);
+
+  useEffect(() => {
+    const onSocketData = (data: any) => {
+      XTerm.current?.write(data);
+    };
+
+    socket.listeners("terminal:data").length === 0 &&
+      socket.on("terminal:data", onSocketData);
+
+    return () => {
+      socket.off("terminal:data", onSocketData);
+    };
+  }, []);
 
   return (
     <div className="w-full h-full relative flex flex-col">

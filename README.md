@@ -1,12 +1,32 @@
-# Next Turbo Express Starter
+<h1 align="center">CLOUD IDE 🌥️</h1>
 
-## Using This Template
+Cloud-IDE is an web-based Integrated Development Environment (IDE) that empowers developers to code, debug, and collaborate in real-time directly from their browser. Its lightweight design ensures high performance, while its cloud-based nature eliminates the need for local installations, allowing users to work from anywhere.
 
-To get started, `fork` this template repository.
+![Screen Shot](./ss/Screenshot%202024-09-22%20034357.png)
 
-## What's Inside?
+## Techstack
 
-This Turborepo includes the following apps and packages:
+- Terborepo (Monorepo)
+- NextJS (UI)
+- ShadCN UI (Components Library)
+- Express JS (Backend)
+
+## Setup Locally
+
+- **Step 1:** Fork & Clone the Repository into your local machine.
+- **Step 2:** Install all the dependencies.
+  ```bash
+  pnpm install
+  ```
+- **Step 3:** Make sure all the `.env.example` file in all workspace (If Exists) be converted into `.env` and the values are added properly.
+- **Step 4:** Run the code.
+  ```bash
+  pnpm dev
+  ```
+
+> **Note:** Make sure that `node-pty` package is added properly. If not then search it on google.
+
+## Folder Structure
 
 ### Apps
 
