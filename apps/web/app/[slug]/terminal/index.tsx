@@ -52,7 +52,12 @@ export default function Terminal({}: Props) {
       const fitAddon = new FitAddon();
       XTerm.current.loadAddon(fitAddon);
       fitAddon.fit();
-      socket.emit("terminal:resize", JSON.stringify(fitAddon.proposeDimensions())); // Initial resize
+      setTimeout(() =>
+        socket.emit(
+          "terminal:resize",
+          JSON.stringify(fitAddon.proposeDimensions())
+        )
+      ); // Initial resize
 
       XTerm.current.open(TElement.current);
 
@@ -70,7 +75,10 @@ export default function Terminal({}: Props) {
 
       const resizeObserver = new ResizeObserver(() => {
         fitAddon.fit();
-        socket.emit("terminal:resize", JSON.stringify(fitAddon.proposeDimensions()));
+        socket.emit(
+          "terminal:resize",
+          JSON.stringify(fitAddon.proposeDimensions())
+        );
       });
       resizeObserver.observe(TElement.current);
 

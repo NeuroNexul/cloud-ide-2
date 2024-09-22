@@ -1,3 +1,5 @@
+"use client";
+
 // import { OneOf } from "@/types/utils";
 import React from "react";
 import {
@@ -16,91 +18,14 @@ import { getIcon } from "~/components/flie_icons/icons";
 import { Button } from "@repo/ui/components/ui/button";
 import { VscNewFile } from "react-icons/vsc";
 import { IoReloadOutline } from "react-icons/io5";
-
-type File = {
-  name: string;
-  type: "file";
-  extension: string;
-};
-
-type Dir = {
-  name: string;
-  type: "dir";
-  children: Array<File | Dir>;
-};
-
-// type Node = OneOf<[File, Dir]>;
-
-const rootDir: Dir = {
-  name: "root",
-  type: "dir",
-  children: [
-    {
-      name: "home",
-      type: "dir",
-      children: [
-        {
-          name: ".next",
-          type: "dir",
-          children: [],
-        },
-        {
-          name: "app",
-          type: "dir",
-          children: [
-            {
-              name: "index.tsx",
-              type: "file",
-              extension: "tsx",
-            },
-            {
-              name: "terminal",
-              type: "dir",
-              children: [
-                {
-                  name: "index.tsx",
-                  type: "file",
-                  extension: "tsx",
-                },
-              ],
-            },
-            {
-              name: "explorer",
-              type: "dir",
-              children: [
-                {
-                  name: "index.tsx",
-                  type: "file",
-                  extension: "tsx",
-                },
-              ],
-            },
-          ],
-        },
-        {
-          name: "public",
-          type: "dir",
-          children: [
-            {
-              name: "favicon.ico",
-              type: "file",
-              extension: "ico",
-            },
-            {
-              name: "logo.svg",
-              type: "file",
-              extension: "svg",
-            },
-          ],
-        },
-      ],
-    },
-  ],
-};
+import { useData } from "~/context/data";
+import { Directory, Root } from "~/context/data/type";
 
 type Props = object;
 
 export default function Explorer({}: Props) {
+  const data = useData();
+
   return (
     <div className="w-full h-full flex flex-col">
       {/* Top Bar */}
@@ -124,18 +49,24 @@ export default function Explorer({}: Props) {
       </div>
 
       {/* Content */}
-      <div className="w-full h-full flex-grow p-2">
-        <ScrollArea className="w-full h-full" orientation="vertical">
-          <Directory node={rootDir} />
-        </ScrollArea>
-      </div>
+      <ScrollArea className="w-full h-[calc(100%-31px)]" orientation="vertical">
+        <div className="w-full h-full flex-grow p-2">
+          <DirectoryView node={data.explorer.root} />
+        </div>
+      </ScrollArea>
     </div>
   );
 }
 
-function Directory({ node }: { node: Dir }) {
+function DirectoryView({ node }: { node: Root | Directory }) {
+  const data = useData();
+
   return (
-    <Accordion type="single" collapsible>
+    <Accordion
+      type="single"
+      collapsible
+      defaultValue={node.type === "root" ? "item-1" : undefined}
+    >
       <AccordionItem value="item-1" className="border-none">
         <AccordionTrigger
           className={cn(
@@ -151,38 +82,80 @@ function Directory({ node }: { node: Dir }) {
             {node.name}
           </p>
         </AccordionTrigger>
-        {node.children.length > 0 && (
-          <AccordionContent className="border-none p-0">
-            <div className="pl-4 border-l">
-              <div>
-                {node.children
-                  .sort((a, b) => (b.type === "dir" ? 1 : -1))
-                  .map((child) => {
-                    if (child.type === "file") {
-                      return (
-                        <div
-                          key={child.name}
-                          className="hover:bg-muted/50 border border-background rounded-md py-2 px-4 font-semibold cursor-pointer flex flex-row items-center gap-2 text-ellipsis overflow-hidden whitespace-nowrap"
-                        >
-                          {/* <FaRegFile className="flex-shrink-0" /> */}
-                          <Image
-                            src={getIcon(child.name)}
-                            alt={child.name}
-                            width={25}
-                            height={25}
-                            className="px-1 flex-shrink-0"
-                          />
-                          {child.name}
-                        </div>
-                      );
-                    } else {
-                      return <Directory key={child.name} node={child} />;
-                    }
-                  })}
+        {(node.type === "dir" || node.type === "root") &&
+          node.nodes.length > 0 && (
+            <AccordionContent className="border-none p-0">
+              <div className="pl-4 border-l">
+                <div>
+                  {node.nodes
+                    .sort((a, b) => (b.type === "dir" ? 1 : -1))
+                    .map((child) => {
+                      if (child.type === "file") {
+                        return (
+                          <div
+                            key={child.absolutePath}
+                            className={cn(
+                              "hover:bg-muted/50 border border-background rounded-md py-2 px-4 font-semibold cursor-pointer flex flex-row items-center gap-2 text-ellipsis overflow-hidden whitespace-nowrap",
+                              data.editor.tabs.find(
+                                (tab) =>
+                                  tab.absolutePath === child.absolutePath &&
+                                  tab.isActive
+                              )
+                                ? "bg-muted/40"
+                                : ""
+                            )}
+                            onClick={() => {
+                              data.editor.setTabs((tabs) => {
+                                if (
+                                  tabs.find(
+                                    (tab) =>
+                                      tab.absolutePath === child.absolutePath
+                                  )
+                                ) {
+                                  return tabs.map(
+                                    (tab) =>
+                                      ({
+                                        ...tab,
+                                        isActive:
+                                          tab.absolutePath ===
+                                          child.absolutePath,
+                                      }) as any
+                                  );
+                                }
+
+                                return [
+                                  ...(tabs.map((tab) => ({
+                                    ...tab,
+                                    isActive: false,
+                                  })) as any),
+                                  {
+                                    ...child,
+                                    isActive: true,
+                                    data: "",
+                                  },
+                                ];
+                              });
+                            }}
+                          >
+                            {/* <FaRegFile className="flex-shrink-0" /> */}
+                            <Image
+                              src={getIcon(child.name)}
+                              alt={child.name}
+                              width={18}
+                              height={18}
+                              className="flex-shrink-0"
+                            />
+                            {child.name}
+                          </div>
+                        );
+                      } else {
+                        return <DirectoryView key={child.name} node={child} />;
+                      }
+                    })}
+                </div>
               </div>
-            </div>
-          </AccordionContent>
-        )}
+            </AccordionContent>
+          )}
       </AccordionItem>
     </Accordion>
   );

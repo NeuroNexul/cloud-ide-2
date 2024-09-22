@@ -11,57 +11,63 @@ import Image from "next/image";
 import { ScrollArea } from "@repo/ui/components/ui/scroll-area";
 import { getIcon } from "~/components/flie_icons/icons";
 import { useSettings } from "~/context/settings";
-
-type File = {
-  name: string;
-  language: string;
-  value: string;
-};
-
-const files: File[] = [
-  {
-    name: "script.js",
-    language: "javascript",
-    value: `console.log("Hello, world!");`,
-  },
-  {
-    name: "style.css",
-    language: "css",
-    value: `body {
-  background-color: #f0f0f0;
-  font-family: Arial, sans-serif;
-}`,
-  },
-  {
-    name: "index.html",
-    language: "html",
-    value: `<!DOCTYPE html>
-  <html lang="en">
-  <head>
-    <meta charset="UTF-8" />
-    <meta http-equiv="X-UA-Compatible" content="IE=edge" />
-    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-    <title>Document</title>
-    <link rel="stylesheet" href="style.css" />
-  </head>
-  <body>
-    <script src="script.js"></script>
-  </body>
-</html>`,
-  },
-];
+import { useData } from "~/context/data";
 
 type Props = object;
 
 export default function Editor({}: Props) {
   const monaco = useMonaco();
   const settings = useSettings();
+  const data = useData();
 
-  const [fileName, setFileName] = useState("index.html");
-  const file = useMemo(
-    () => files.find((f) => f.name === fileName) || files[0],
-    [fileName]
-  );
+  const files = useMemo<
+    {
+      name: string;
+      path: string;
+      value: string | null;
+    }[]
+  >(() => {
+    const tabs = data.editor.tabs;
+    return tabs.map((tab) => ({
+      name: tab.name,
+      path: tab.absolutePath,
+      value: null,
+    }));
+  }, [data]);
+
+  const [fileName, setFileName] = useState("");
+  const [file, setFile] = useState<{
+    name: string;
+    path: string;
+    value: string | null;
+  } | null>(null);
+
+  useEffect(() => {
+    (async () => {
+      if (!fileName) return;
+
+      const file = files.find((f) => f.path === fileName);
+      if (!file) return;
+
+      if (file.value === null) {
+        const res = await fetch(
+          `http://localhost:5001/api/files/get?path=${file.path}`
+        );
+        const data = await res.json();
+        file.value = data.content;
+      }
+
+      setFile(file);
+    })();
+  }, [fileName]);
+
+  useEffect(() => {
+    if (!data) return;
+
+    setFileName(
+      data.editor.tabs.find((tab) => tab.isActive)?.absolutePath || ""
+    );
+  }, [data]);
 
   useEffect(() => {
     if (!monaco) return;
@@ -81,31 +87,43 @@ export default function Editor({}: Props) {
       {/* Navbar */}
       <div className="w-full h-8 bg-muted/60 flex items-center justify-between">
         {/* Tabs */}
-        <ScrollArea className="h-full w-full" orientation="horizontal">
+        <ScrollArea
+          className="h-full w-full"
+          orientation="horizontal"
+          width={6}
+        >
           <div className="flex h-full w-full">
             {files.map((file) => (
               <div
-                key={file.name}
+                key={file.path}
                 className={cn(
                   "border-y-2 border-y-transparent rounded-t-lg overflow-hidden transition-colors hover:bg-muted",
                   "border-x",
-                  "flex items-center justify-center",
+                  "flex items-center justify-center flex-shrink-0",
                   "group",
-                  file.name === fileName
+                  file.path === fileName
                     ? "bg-background border-t-blue-700"
                     : ""
                 )}
               >
                 <button
                   className={cn(
-                    "px-1 py-1 h-full hover:bg-muted transition-colors text-sm flex flex-row items-center"
+                    "px-1 py-1 h-full hover:bg-muted transition-colors text-sm flex flex-row items-center flex-shrink-0"
                   )}
-                  onClick={() => setFileName(file.name)}
-                  disabled={file.name === fileName}
+                  onClick={() => {
+                    data.editor.setTabs((tabs) =>
+                      tabs.map((tab) => ({
+                        ...tab,
+                        isActive: tab.absolutePath === file.path,
+                      }))
+                    );
+                    setFileName(file.path);
+                  }}
+                  disabled={file.path === fileName}
                 >
                   <Image
                     src={getIcon(file.name)}
-                    alt={file.name}
+                    alt={file.path}
                     width={25}
                     height={25}
                     className="px-1 flex-shrink-0"
@@ -114,12 +132,14 @@ export default function Editor({}: Props) {
                 </button>
                 <button
                   className={cn(
-                    "group-hover:opacity-100 opacity-0 transition-opacity",
+                    "group-hover:opacity-100 opacity-0 transition-opacity flex-shrink-0",
                     "px-1 py-1 h-full hover:bg-background transition-colors",
-                    file.name === fileName ? "opacity-100" : ""
+                    file.path === fileName ? "opacity-100" : ""
                   )}
                   onClick={() => {
-                    // setFileName(files[0].name);
+                    data.editor.setTabs((tabs) =>
+                      tabs.filter((tab) => tab.absolutePath !== file.path)
+                    );
                   }}
                 >
                   <IoIosClose />
@@ -146,10 +166,23 @@ export default function Editor({}: Props) {
           <MonacoEditor
             height="100%"
             theme="default"
-            path={file.name}
-            defaultLanguage={file.language}
-            defaultValue={file.value}
+            path={file.path}
+            // defaultLanguage={file.language}
+            defaultValue={file.value === null ? "Loading..." : file.value}
+            onChange={(value) => {
+              fetch("http://localhost:5001/api/files/update", {
+                method: "POST",
+                headers: {
+                  "Content-Type": "application/json",
+                },
+                body: JSON.stringify({
+                  path: file.path,
+                  content: value,
+                }),
+              });
+            }}
             options={{
+              readOnly: file.value === null,
               padding: { top: 8 },
               "semanticHighlighting.enabled": false,
               ...settings.editor,

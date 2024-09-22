@@ -5,6 +5,7 @@ import "./globals.css";
 import { cn } from "@repo/ui/lib/utils";
 import { SettingsProvider } from "~/context/settings";
 import { SocketProvider } from "~/context/socket";
+import { DataProvider } from "~/context/data";
 
 const geistSans = localFont({
   src: "./fonts/GeistVF.woff",
@@ -40,20 +41,22 @@ export default function RootLayout({
   return (
     <html lang="en">
       <SocketProvider>
-        <SettingsProvider>
-          <body
-            className={cn(
-              geistSans.variable,
-              geistMono.variable,
-              barlow.variable,
-              jetbrains_mono.variable,
-              "antialiased",
-              "dark"
-            )}
-          >
-            {children}
-          </body>
-        </SettingsProvider>
+        <DataProvider>
+          <SettingsProvider>
+            <body
+              className={cn(
+                geistSans.variable,
+                geistMono.variable,
+                barlow.variable,
+                jetbrains_mono.variable,
+                "antialiased",
+                "dark"
+              )}
+            >
+              {children}
+            </body>
+          </SettingsProvider>
+        </DataProvider>
       </SocketProvider>
     </html>
   );
