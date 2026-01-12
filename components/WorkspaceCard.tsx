@@ -9,6 +9,7 @@ import { Progress } from "@/components/ui/progress";
 import {
   ChevronDownIcon,
   ChevronRightIcon,
+  ContainerIcon,
   CopyIcon,
   EyeOffIcon,
   EyeIcon,
@@ -251,9 +252,22 @@ export function WorkspaceCard({
 
       <CardContent className="space-y-4 px-4">
         <div className="flex justify-between items-center mb-2">
-          <div></div>
+          <div className="flex flex-row flex-wrap gap-4">
+            <div>
+              <ContainerIcon className="inline size-5 mr-2 text-muted-foreground" />
+              <span className="font-medium text-sm text-muted-foreground">
+                Image: {container.Image}
+              </span>
+            </div>
+            <div>
+              <ContainerIcon className="inline size-5 mr-2 text-muted-foreground" />
+              <span className="font-medium text-sm text-muted-foreground">
+                ID: {container.Id.substring(0, 12)}
+              </span>
+            </div>
+          </div>
           {/* Actions */}
-          <div className="flex items-center gap-0.5">
+          <div className="flex items-center gap-1">
             <div
               className={cn(
                 "flex items-center",
